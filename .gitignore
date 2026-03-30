@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js
+client/.next/
+client/out/
+
+# Build outputs
+server/dist/
+
+# Environment variables
+.env
+.env.local
+.env*.local
+**/.env
+**/.env.local
+
+# Claude / AI tooling
+.claude/
+CLAUDE.md
+AGENTS.md
+PLAN.md
+*.claude
+.claudeignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
