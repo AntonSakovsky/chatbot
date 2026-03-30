@@ -1,8 +1,8 @@
-import { Router, Response } from 'express';
-import { supabase } from '../services/supabase';
-import { requireAuth, AuthRequest } from '../middleware/auth';
-import { streamGeminiResponse, generateTitle, ConversationMessage } from '../services/llm';
+import { Response, Router } from 'express';
+import { AuthRequest, requireAuth } from '../middleware/auth';
+import { ConversationMessage, generateTitle, streamGeminiResponse } from '../services/llm';
 import { getFileAsBase64 } from '../services/storage';
+import { supabase } from '../services/supabase';
 
 const router = Router({ mergeParams: true });
 
@@ -56,7 +56,6 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  // Fetch attachments they exist
   let attachments: any[] = [];
   if (attachmentIds.length > 0) {
     const { data } = await supabase
@@ -66,7 +65,6 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     attachments = data ?? [];
   }
 
-  // Save user message
   const { data: userMessage, error: insertError } = await supabase
     .from('messages')
     .insert({ conversation_id: conversationId, role: 'user', content })
@@ -78,7 +76,6 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  // Link attachments to message
   if (attachments.length > 0) {
     await supabase
       .from('attachments')
@@ -86,7 +83,6 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       .in('id', attachmentIds);
   }
 
-  // Load conversation history for context
   const { data: history } = await supabase
     .from('messages')
     .select('role, content')
@@ -94,23 +90,18 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     .order('created_at', { ascending: true })
     .limit(50);
 
-  const geminiHistory: ConversationMessage[] = (history ?? [])
-    .slice(0, -1) // exclude the message just inserted
+  const conversationHistory: ConversationMessage[] = (history ?? [])
+    .slice(0, -1)
     .map((m) => ({
       role: m.role === 'user' ? 'user' : 'model',
       parts: [{ text: m.content }],
     }));
 
-  // Build user parts for Gemini
   const userParts: any[] = [];
 
-  // Add document context
   for (const att of attachments) {
     if (att.extracted_text) {
-      userParts.push({
-        type: 'text',
-        text: `[Document: ${att.file_name}]\n${att.extracted_text}\n`,
-      });
+      userParts.push({ type: 'text', text: `[Document: ${att.file_name}]\n${att.extracted_text}\n` });
     } else if (att.mime_type.startsWith('image/')) {
       const base64 = await getFileAsBase64(att.storage_path);
       userParts.push({ type: 'image', mimeType: att.mime_type, data: base64 });
@@ -119,23 +110,17 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 
   userParts.push({ type: 'text', text: content });
 
-  const assistantText = await streamGeminiResponse(userParts, geminiHistory, res);
+  const assistantText = await streamGeminiResponse(userParts, conversationHistory, res);
 
-  // Save assistant message (after stream ends)
   const { data: assistantMessage } = await supabase
     .from('messages')
     .insert({ conversation_id: conversationId, role: 'assistant', content: assistantText })
     .select('id')
     .single();
 
-  // Auto-generate title on first exchange
   if (conv.title === 'New Chat' && assistantMessage) {
     generateTitle(content).then((title) => {
-      supabase
-        .from('conversations')
-        .update({ title })
-        .eq('id', conversationId)
-        .then(() => {});
+      supabase.from('conversations').update({ title }).eq('id', conversationId).then(() => {});
     });
   }
 });

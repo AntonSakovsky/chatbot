@@ -1,6 +1,6 @@
-import { Router, Request, Response } from 'express';
-import { supabase } from '../services/supabase';
+import { Request, Response, Router } from 'express';
 import { streamGeminiResponse } from '../services/llm';
+import { supabase } from '../services/supabase';
 
 const router = Router();
 const MAX_QUESTIONS = 3;
@@ -47,7 +47,9 @@ router.post('/chat', async (req: Request, res: Response) => {
   }
 
   if (session.question_count >= MAX_QUESTIONS) {
-    res.status(403).json({ error: 'Free question limit reached. Please sign in.', code: 'LIMIT_REACHED' });
+    res
+      .status(403)
+      .json({ error: 'Free question limit reached. Please sign in.', code: 'LIMIT_REACHED' });
     return;
   }
 

@@ -1,46 +1,33 @@
+'use client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback } from 'react';
 import { apiClient, streamPost } from '@/lib/api-client';
+import type { Message } from './use-messages';
 
-export interface Attachment {
-  id: string;
-  file_name: string;
-  storage_path: string;
-  mime_type: string;
-}
-
-export interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  created_at: string;
-  attachments?: Attachment[];
-}
-
-export function useMessages(conversationId: string | null) {
-  return useQuery<Message[]>({
-    queryKey: ['messages', conversationId],
+export function useAnonStatus() {
+  return useQuery<{ remaining: number; used: number }>({
+    queryKey: ['anon-status'],
     queryFn: async () => {
-      const { data } = await apiClient.get(`/api/conversations/${conversationId}/messages`);
+      const { data } = await apiClient.get('/api/anonymous/status');
       return data;
     },
-    enabled: !!conversationId,
+    staleTime: 0,
   });
 }
 
-export function useSendMessage(conversationId: string) {
+export function useAnonChat(conversationId: string) {
   const queryClient = useQueryClient();
   const [streamingContent, setStreamingContent] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const sendMessage = useCallback(
-    async (content: string, attachmentIds: string[] = []) => {
+    async (content: string) => {
       setError(null);
       setIsStreaming(true);
       setStreamingContent('');
 
-      // Optimistically add user message
       queryClient.setQueryData<Message[]>(['messages', conversationId], (prev) => [
         ...(prev ?? []),
         {
@@ -53,11 +40,7 @@ export function useSendMessage(conversationId: string) {
       ]);
 
       try {
-        const reader = await streamPost(
-          `/api/conversations/${conversationId}/messages`,
-          { content, attachmentIds }
-        );
-
+        const reader = await streamPost('/api/anonymous/chat', { content });
         const decoder = new TextDecoder();
         let fullText = '';
 
@@ -66,9 +49,7 @@ export function useSendMessage(conversationId: string) {
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
+          for (const line of chunk.split('\n')) {
             if (!line.startsWith('data: ')) continue;
             const payload = line.slice(6).trim();
             if (payload === '[DONE]') break;
@@ -85,13 +66,23 @@ export function useSendMessage(conversationId: string) {
           }
         }
 
-        // Refresh messages from server to get the persisted assistant message
-        await queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-        await queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        queryClient.setQueryData<Message[]>(['messages', conversationId], (prev) => [
+          ...(prev ?? []),
+          {
+            id: `anon-${Date.now()}`,
+            role: 'assistant',
+            content: fullText,
+            created_at: new Date().toISOString(),
+            attachments: [],
+          },
+        ]);
+
+        queryClient.invalidateQueries({ queryKey: ['anon-status'] });
       } catch (err) {
         setError(err as Error);
-        // Remove optimistic user message on failure
-        await queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+        queryClient.setQueryData<Message[]>(['messages', conversationId], (prev) =>
+          (prev ?? []).filter((m) => !m.id.startsWith('temp-'))
+        );
       } finally {
         setIsStreaming(false);
         setStreamingContent('');

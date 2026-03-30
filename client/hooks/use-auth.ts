@@ -1,13 +1,10 @@
 'use client';
 
-import { createClient } from '@supabase/supabase-js';
 import { useEffect, useState, useCallback } from 'react';
 import type { User } from '@supabase/supabase-js';
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = createSupabaseBrowserClient();
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -16,14 +13,12 @@ export function useAuth() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
-      if (data.session?.access_token) {
-        localStorage.setItem('sb-access-token', data.session.access_token);
-      }
       setLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      // Keep localStorage token in sync for api-client.ts
       if (session?.access_token) {
         localStorage.setItem('sb-access-token', session.access_token);
       } else {
@@ -47,7 +42,7 @@ export function useAuth() {
   const signInWithGoogle = useCallback(async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/chat` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) throw new Error(error.message);
   }, []);

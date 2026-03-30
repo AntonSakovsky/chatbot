@@ -1,41 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
-// Routes that require authentication
-const PROTECTED = ['/chat'];
-// Routes only for unauthenticated users (redirect to /chat if already logged in)
-const AUTH_ONLY = ['/login'];
-
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  
 
-  // Read Supabase session token from cookies
-  // Supabase stores the session in a cookie named sb-<projectRef>-auth-token
-  const hasCookie = req.cookies.getAll().some(
-    (c) => c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
+  const res = NextResponse.next();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => req.cookies.getAll(),
+        setAll: (cookies) => {
+          cookies.forEach(({ name, value, options }) => {
+            res.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
   );
 
-  const isProtected = PROTECTED.some((p) => pathname.startsWith(p));
-  const isAuthOnly = AUTH_ONLY.some((p) => pathname.startsWith(p));
+  const { data } = await supabase.auth.getSession();
+  const isLoggedIn = !!data.session;
 
-  console.log(isAuthOnly, isProtected);
-  
 
-  if (isProtected && !hasCookie) {
-    const loginUrl = req.nextUrl.clone();
-    loginUrl.pathname = '/login';
-    return NextResponse.redirect(loginUrl);
+  if (pathname.startsWith('/login') && isLoggedIn) {
+    return NextResponse.redirect(new URL('/chat', req.url));
   }
 
-  if (isAuthOnly && hasCookie) {
-    const chatUrl = req.nextUrl.clone();
-    chatUrl.pathname = '/chat';
-    return NextResponse.redirect(chatUrl);
-  }
-
-  return NextResponse.next();
+  return res;
 }
 
 export const config = {
-  matcher: ['/chat/:path*', '/login'],
+  matcher: ['/login'],
 };
