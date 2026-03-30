@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import type { User } from '@supabase/supabase-js';
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser';
+import type { Session, User } from '@supabase/supabase-js';
+import { useCallback, useEffect, useState } from 'react';
+
+type AuthStateChangePayload = { data: { session: { user: User } | null } };
 
 const supabase = createSupabaseBrowserClient();
 
@@ -11,12 +13,12 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: AuthStateChangePayload) => {
       setUser(data.session?.user ?? null);
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event: any, session: Session | null) => {
       setUser(session?.user ?? null);
       // Keep localStorage token in sync for api-client.ts
       if (session?.access_token) {
