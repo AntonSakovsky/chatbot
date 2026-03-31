@@ -1,18 +1,17 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import { apiClient, streamPost } from '@/lib/api-client';
 import { getErrorMessage, type ApiError } from '@/lib/error-utils';
 
-export interface Attachment {
+export type Attachment = {
   id: string;
   file_name: string;
   storage_path: string;
   mime_type: string;
 }
 
-export interface Message {
+export type Message = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
@@ -54,7 +53,6 @@ export function useSendMessage(conversationId: string) {
       setIsStreaming(true);
       setStreamingContent('');
 
-      // Optimistically add user message
       queryClient.setQueryData<Message[]>(['messages', conversationId], (prev) => [
         ...(prev ?? []),
         {
@@ -99,12 +97,25 @@ export function useSendMessage(conversationId: string) {
           }
         }
 
-        await queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-        await queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        queryClient.setQueryData<Message[]>(['messages', conversationId], (prev) => [
+          ...(prev ?? []),
+          {
+            id: `temp-assistant-${Date.now()}`,
+            role: 'assistant' as const,
+            content: fullText,
+            created_at: new Date().toISOString(),
+            attachments: [],
+          },
+        ]);
+        setIsStreaming(false);
+        setStreamingContent('');
+        
+        queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
       } catch (err) {
         const friendly = getErrorMessage(err);
         setError(Object.assign(new Error(friendly), err as object));
-        await queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+        queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       } finally {
         setIsStreaming(false);
         setStreamingContent('');

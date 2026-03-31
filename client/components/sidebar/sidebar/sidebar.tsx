@@ -5,30 +5,46 @@ import { useAuth } from '@/hooks/use-auth';
 import { useConversations } from '@/hooks/use-conversations';
 import { useRealtimeSync } from '@/hooks/use-realtime-sync';
 import { cn } from '@/lib/utils';
-import { LogIn, LogOut, MessageSquare } from 'lucide-react';
+import { LogIn, LogOut, MessageSquare, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { NewChatButton } from '@/components/sidebar/new-chat-button/new-chat-button';
 import { SidebarItem } from '@/components/sidebar/sidebar-item/sidebar-item';
 
-export function Sidebar() {
+type SidebarProps = {
+  onClose?: () => void;
+};
+
+export function Sidebar({ onClose }: SidebarProps) {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { data: conversations, isLoading } = useConversations();
   useRealtimeSync(user);
 
   const onSignInClick = () => {
+    onClose?.();
     router.push('/login');
   };
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <Link href="/chat" className="flex items-center gap-2 font-semibold text-sm">
+        <Link href="/chat" className="flex items-center gap-2 font-semibold text-sm" onClick={onClose}>
           <MessageSquare className="w-4 h-4" />
           ChatBot
         </Link>
-        <NewChatButton />
+        <div className="flex items-center gap-1">
+          <NewChatButton onClose={onClose} />
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="md:hidden p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              aria-label="Close menu"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">
@@ -43,7 +59,7 @@ export function Sidebar() {
         ) : (
           <div className="space-y-0.5">
             {conversations.map((conversation) => (
-              <SidebarItem key={conversation.id} conversation={conversation} />
+              <SidebarItem key={conversation.id} conversation={conversation} onClose={onClose} />
             ))}
           </div>
         )}

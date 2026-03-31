@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
 import { getErrorMessage } from '@/lib/error-utils';
 
-export interface Conversation {
+export type Conversation = {
   id: string;
   title: string;
   created_at: string;

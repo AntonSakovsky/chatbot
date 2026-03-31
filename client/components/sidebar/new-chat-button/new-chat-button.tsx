@@ -1,16 +1,21 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { SquarePen } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useCreateConversation } from '@/hooks/use-conversations';
 
-export function NewChatButton() {
+type NewChatButtonProps = {
+  onClose?: () => void;
+};
+
+export function NewChatButton({ onClose }: NewChatButtonProps) {
   const router = useRouter();
   const { mutate: createConversation, isPending } = useCreateConversation();
 
   function handleClick() {
     createConversation(undefined, {
       onSuccess: (conversation) => {
+        onClose?.();
         router.push(`/chat/${conversation.id}`);
       },
     });
@@ -20,10 +25,11 @@ export function NewChatButton() {
     <button
       onClick={handleClick}
       disabled={isPending}
-      className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+      className="flex items-center gap-1.5 px-2.5 h-8 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
       aria-label="New chat"
     >
-      <SquarePen className="w-4 h-4" />
+      <Plus className="w-4 h-4 shrink-0" />
+      <span>New chat</span>
     </button>
   );
 }

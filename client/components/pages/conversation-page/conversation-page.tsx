@@ -3,9 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useMessages, useSendMessage } from '@/hooks/use-messages';
-import { useAnonChat } from '@/hooks/use-anonymous';
-import { useAuth } from '@/hooks/use-auth';
 import { useRealtimeMessages } from '@/hooks/use-realtime-sync';
+import type { ApiError } from '@/lib/error-utils';
 import { MessageList } from '@/components/chat/message-list/message-list';
 import { MessageInput } from '@/components/chat/message-input/message-input';
 
@@ -18,16 +17,11 @@ export function ConversationPage({ id }: ConversationPageProps) {
   const router = useRouter();
   const initialMessage = searchParams.get('msg');
   const didAutoSend = useRef(false);
-  const { user } = useAuth();
 
-  const { data: messages = [], isLoading } = useMessages(user ? id : null);
+  const { data: messages = [], isLoading } = useMessages(id);
+  const { sendMessage, streamingContent, isStreaming, error } = useSendMessage(id);
 
-  const auth = useSendMessage(id);
-  const anon = useAnonChat(id);
-
-  const { sendMessage, streamingContent, isStreaming, error } = user ? auth : anon;
-
-  useRealtimeMessages(user ? id : null, isStreaming);
+  useRealtimeMessages(id, isStreaming);
 
   useEffect(() => {
     if (initialMessage && !didAutoSend.current) {
@@ -48,7 +42,7 @@ export function ConversationPage({ id }: ConversationPageProps) {
       {error && (
         <div className="text-center pb-2 px-4">
           <p className="text-xs text-destructive">{error.message}</p>
-          {(error as any).code === 'LIMIT_REACHED' && (
+          {(error as ApiError).code === 'LIMIT_REACHED' && (
             <a href="/login" className="text-xs underline text-muted-foreground hover:text-foreground mt-1 inline-block">
               Sign in to continue →
             </a>

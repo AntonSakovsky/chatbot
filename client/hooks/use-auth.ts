@@ -2,6 +2,7 @@
 
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser';
 import type { Session, User } from '@supabase/supabase-js';
+import { useRouter } from 'next/dist/client/components/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 type AuthStateChangePayload = { data: { session: { user: User } | null } };
@@ -11,6 +12,7 @@ const supabase = createSupabaseBrowserClient();
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }: AuthStateChangePayload) => {
@@ -18,15 +20,17 @@ export function useAuth() {
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event: any, session: Session | null) => {
-      setUser(session?.user ?? null);
-      // Keep localStorage token in sync for api-client.ts
-      if (session?.access_token) {
-        localStorage.setItem('sb-access-token', session.access_token);
-      } else {
-        localStorage.removeItem('sb-access-token');
-      }
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event: any, session: Session | null) => {
+        setUser(session?.user ?? null);
+        // Keep localStorage token in sync for api-client.ts
+        if (session?.access_token) {
+          localStorage.setItem('sb-access-token', session.access_token);
+        } else {
+          localStorage.removeItem('sb-access-token');
+        }
+      },
+    );
 
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -41,17 +45,11 @@ export function useAuth() {
     if (error) throw new Error(error.message);
   }, []);
 
-  const signInWithGoogle = useCallback(async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (error) throw new Error(error.message);
-  }, []);
-
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-  }, []);
+    localStorage.removeItem('anon_token');
+    router.push('/chat');
+  }, [router]);
 
-  return { user, loading, signInWithEmail, signUpWithEmail, signInWithGoogle, signOut };
+  return { user, loading, signInWithEmail, signUpWithEmail, signOut };
 }

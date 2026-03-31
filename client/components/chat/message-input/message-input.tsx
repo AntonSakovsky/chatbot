@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { ArrowUp } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 type MessageInputProps = {
   onSend: (content: string) => void;
@@ -35,7 +36,12 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
 
   return (
     <div className="p-4 border-t border-border">
-      <div className="relative flex items-end gap-2 bg-muted rounded-2xl px-4 py-3">
+      <div
+        className={cn('relative flex gap-2 bg-muted rounded-2xl px-4 py-3', {
+          'items-center': value.split('\n').length === 1,
+          'items-end': value.split('\n').length > 1,
+        })}
+      >
         <textarea
           ref={textareaRef}
           value={value}
