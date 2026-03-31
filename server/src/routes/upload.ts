@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
-import { PDFParse } from 'pdf-parse';
+import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { supabase } from '../services/supabase';
@@ -41,8 +41,7 @@ router.post('/', requireAuth, upload.single('file'), async (req: AuthRequest, re
 
   if (mimetype === 'application/pdf') {
     try {
-      const parser = new PDFParse({ data: buffer });
-      const parsed = await parser.getText();
+      const parsed = await pdfParse(buffer);
       extractedText = parsed.text;
     } catch {
       // extraction failure is non-fatal
