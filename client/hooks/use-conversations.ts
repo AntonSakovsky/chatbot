@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
+import { getErrorMessage } from '@/lib/error-utils';
 
 export interface Conversation {
   id: string;
@@ -28,6 +30,9 @@ export function useCreateConversation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
+    onError: (err) => {
+      toast.error(getErrorMessage(err));
+    },
   });
 }
 
@@ -40,6 +45,9 @@ export function useDeleteConversation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
+    onError: (err) => {
+      toast.error(getErrorMessage(err));
+    },
   });
 }
 
@@ -51,6 +59,9 @@ export function useRenameConversation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err));
     },
   });
 }

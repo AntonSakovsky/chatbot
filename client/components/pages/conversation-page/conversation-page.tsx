@@ -46,7 +46,14 @@ export function ConversationPage({ id }: ConversationPageProps) {
         isLoading={isLoading}
       />
       {error && (
-        <p className="text-xs text-destructive text-center pb-2">{error.message}</p>
+        <div className="text-center pb-2 px-4">
+          <p className="text-xs text-destructive">{error.message}</p>
+          {(error as any).code === 'LIMIT_REACHED' && (
+            <a href="/login" className="text-xs underline text-muted-foreground hover:text-foreground mt-1 inline-block">
+              Sign in to continue →
+            </a>
+          )}
+        </div>
       )}
       <MessageInput onSend={sendMessage} disabled={isStreaming} />
     </div>

@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback } from 'react';
 import { apiClient, streamPost } from '@/lib/api-client';
+import { getErrorMessage, type ApiError } from '@/lib/error-utils';
 import type { Message } from './use-messages';
 
 export function useAnonStatus() {
@@ -79,7 +80,9 @@ export function useAnonChat(conversationId: string) {
 
         queryClient.invalidateQueries({ queryKey: ['anon-status'] });
       } catch (err) {
-        setError(err as Error);
+        const e = err as ApiError;
+        const friendly = getErrorMessage(e);
+        setError(Object.assign(new Error(friendly), e));
         queryClient.setQueryData<Message[]>(['messages', conversationId], (prev) =>
           (prev ?? []).filter((m) => !m.id.startsWith('temp-'))
         );

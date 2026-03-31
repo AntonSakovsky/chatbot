@@ -1,6 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { apiClient, streamPost } from '@/lib/api-client';
+import { getErrorMessage, type ApiError } from '@/lib/error-utils';
 
 export interface Attachment {
   id: string;
@@ -18,11 +21,22 @@ export interface Message {
 }
 
 export function useMessages(conversationId: string | null) {
+  const router = useRouter();
+
   return useQuery<Message[]>({
     queryKey: ['messages', conversationId],
     queryFn: async () => {
-      const { data } = await apiClient.get(`/api/conversations/${conversationId}/messages`);
-      return data;
+      try {
+        const { data } = await apiClient.get(`/api/conversations/${conversationId}/messages`);
+        return data;
+      } catch (err) {
+        const e = err as ApiError;
+        if (e.status === 404) {
+          router.replace('/chat');
+          return [];
+        }
+        throw err;
+      }
     },
     enabled: !!conversationId,
   });
@@ -85,12 +99,11 @@ export function useSendMessage(conversationId: string) {
           }
         }
 
-        // Refresh messages from server to get the persisted assistant message
         await queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
         await queryClient.invalidateQueries({ queryKey: ['conversations'] });
       } catch (err) {
-        setError(err as Error);
-        // Remove optimistic user message on failure
+        const friendly = getErrorMessage(err);
+        setError(Object.assign(new Error(friendly), err as object));
         await queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       } finally {
         setIsStreaming(false);

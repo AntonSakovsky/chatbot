@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const REQUEST_TIMEOUT_MS = 15_000;
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -15,6 +16,7 @@ function getAnonToken(): string | null {
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
+  timeout: REQUEST_TIMEOUT_MS,
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -31,6 +33,15 @@ apiClient.interceptors.response.use(
     const message = err.response?.data?.error || err.message || 'Request failed';
     const code = err.response?.data?.code;
     const status = err.response?.status;
+
+    // On 401, clear the stored token so the next request won't send an expired one.
+    // Supabase's onAuthStateChange will handle signing the user out automatically.
+    if (status === 401) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('sb-access-token');
+      }
+    }
+
     return Promise.reject(Object.assign(new Error(message), { status, code }));
   }
 );
@@ -41,6 +52,7 @@ export async function uploadFile(file: File): Promise<{ id: string; file_name: s
 
   const { data } = await apiClient.post('/api/upload', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60_000, // uploads need more time
   });
   return data;
 }
@@ -56,11 +68,26 @@ export async function streamPost(
   if (token) headers['Authorization'] = `Bearer ${token}`;
   if (anonToken) headers['X-Anon-Token'] = anonToken;
 
-  const res = await fetch(`${API_URL}${path}`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120_000); // 2 min for streaming
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (err: any) {
+    clearTimeout(timeout);
+    if (err?.name === 'AbortError') {
+      throw Object.assign(new Error('Request timed out. Please try again.'), { status: 408 });
+    }
+    throw Object.assign(new Error('Network error. Please check your connection.'), { status: 0 });
+  }
+
+  clearTimeout(timeout);
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
