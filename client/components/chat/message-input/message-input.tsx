@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { ArrowUp, Paperclip } from 'lucide-react';
+import { ArrowUp, Paperclip, Square } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { uploadFile } from '@/lib/api-client';
 import { FileChip } from './file-chip/file-chip';
@@ -11,10 +11,11 @@ const ACCEPTED = 'image/jpeg,image/png,image/gif,image/webp,application/pdf,text
 
 type MessageInputProps = {
   onSend: (content: string, attachmentIds: string[], optimisticAttachments: OptimisticAttachment[]) => void;
-  disabled?: boolean;
+  isStreaming?: boolean;
+  onStop?: () => void;
 };
 
-export const MessageInput = ({ onSend, disabled }: MessageInputProps) => {
+export const MessageInput = ({ onSend, isStreaming, onStop }: MessageInputProps) => {
   const [value, setValue] = useState('');
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -26,6 +27,10 @@ export const MessageInput = ({ onSend, disabled }: MessageInputProps) => {
     textarea.style.height = 'auto';
     textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
   }, [value]);
+
+  useEffect(() => {
+    if (!isStreaming) textareaRef.current?.focus();
+  }, [isStreaming]);
 
   const uploadAndTrack = useCallback(async (file: File) => {
     const localId = `${Date.now()}-${Math.random()}`;
@@ -82,9 +87,10 @@ export const MessageInput = ({ onSend, disabled }: MessageInputProps) => {
   };
 
   const handleSubmit = () => {
+    if (isStreaming) return;
     const trimmed = value.trim();
     const readyFiles = pendingFiles.filter(f => f.uploadedId);
-    if ((!trimmed && !readyFiles.length) || disabled) return;
+    if (!trimmed && !readyFiles.length) return;
     if (pendingFiles.some(f => f.uploading)) return;
 
     const attachmentIds = readyFiles.map(f => f.uploadedId!);
@@ -101,7 +107,7 @@ export const MessageInput = ({ onSend, disabled }: MessageInputProps) => {
   };
 
   const isUploading = pendingFiles.some(f => f.uploading);
-  const canSend = (value.trim() || pendingFiles.some(f => f.uploadedId)) && !disabled && !isUploading;
+  const canSend = !isStreaming && (value.trim() || pendingFiles.some(f => f.uploadedId)) && !isUploading;
 
   return (
     <div className="p-4 border-t border-border">
@@ -127,9 +133,8 @@ export const MessageInput = ({ onSend, disabled }: MessageInputProps) => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={disabled}
             aria-label="Attach file"
-            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
           >
             <Paperclip className="w-4 h-4" />
           </button>
@@ -141,18 +146,27 @@ export const MessageInput = ({ onSend, disabled }: MessageInputProps) => {
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             placeholder="Message ChatBot..."
-            disabled={disabled}
             rows={1}
-            className="flex-1 bg-transparent resize-none text-sm outline-none placeholder:text-muted-foreground max-h-50 leading-relaxed disabled:opacity-50"
+            className="flex-1 bg-transparent resize-none text-sm outline-none placeholder:text-muted-foreground max-h-50 leading-relaxed"
           />
 
-          <button
-            onClick={handleSubmit}
-            disabled={!canSend}
-            className="shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-opacity disabled:opacity-30 hover:opacity-90"
-          >
-            <ArrowUp className="w-4 h-4" />
-          </button>
+          {isStreaming ? (
+            <button
+              onClick={onStop}
+              className="shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition-opacity"
+              aria-label="Stop generating"
+            >
+              <Square className="w-3 h-3 fill-current" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={!canSend}
+              className="shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-opacity disabled:opacity-30 hover:opacity-90"
+            >
+              <ArrowUp className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

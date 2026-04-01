@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getSupabaseClient } from '@/lib/supabase-realtime';
 import type { User } from '@supabase/supabase-js';
@@ -36,6 +36,8 @@ export function useRealtimeSync(user: User | null) {
 
 export function useRealtimeMessages(conversationId: string | null, isStreaming: boolean) {
   const queryClient = useQueryClient();
+  const isStreamingRef = useRef(isStreaming);
+  isStreamingRef.current = isStreaming;
 
   useEffect(() => {
     if (!conversationId) return;
@@ -53,7 +55,7 @@ export function useRealtimeMessages(conversationId: string | null, isStreaming: 
         },
         () => {
           // Don't interrupt the streaming tab — it handles its own refresh
-          if (!isStreaming) {
+          if (!isStreamingRef.current) {
             queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
           }
         }
@@ -63,5 +65,5 @@ export function useRealtimeMessages(conversationId: string | null, isStreaming: 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, isStreaming, queryClient]);
+  }, [conversationId, queryClient]);
 }

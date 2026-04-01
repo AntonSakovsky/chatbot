@@ -3,15 +3,20 @@
 import { useRouter } from 'next/navigation';
 import { useCreateConversation } from '@/hooks/use-conversations';
 import { MessageInput } from '@/components/chat/message-input/message-input';
+import type { OptimisticAttachment } from '@/components/chat/message-input/types';
 
 export const AuthNewChat = () => {
   const router = useRouter();
-  const { mutate: createConversation, isPending } = useCreateConversation();
+  const { mutate: createConversation } = useCreateConversation();
 
-  const handleSend = (content: string) => {
+  const handleSend = (content: string, attachmentIds: string[], optimisticAttachments: OptimisticAttachment[]) => {
     createConversation(undefined, {
       onSuccess: (conversation) => {
-        router.push(`/chat/${conversation.id}?msg=${encodeURIComponent(content)}`);
+        sessionStorage.setItem(
+          `pendingMsg_${conversation.id}`,
+          JSON.stringify({ content, attachmentIds, optimisticAttachments })
+        );
+        router.push(`/chat/${conversation.id}`);
       },
     });
   };
@@ -25,7 +30,7 @@ export const AuthNewChat = () => {
         <h1 className="text-2xl font-semibold">How can I help you?</h1>
         <p className="text-sm text-muted-foreground">Start a conversation below.</p>
       </div>
-      <MessageInput onSend={handleSend} disabled={isPending} />
+      <MessageInput onSend={handleSend} />
     </div>
   );
 };

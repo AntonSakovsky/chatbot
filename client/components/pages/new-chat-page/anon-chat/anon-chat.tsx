@@ -6,7 +6,7 @@ import { MessageInput } from '@/components/chat/message-input/message-input';
 import type { ApiError } from '@/lib/error-utils';
 
 export const AnonChat = () => {
-  const { messages, sendMessage, streamingContent, isStreaming, error } = useAnonChat();
+  const { messages, sendMessage, stopStreaming, streamingContent, isStreaming, error } = useAnonChat();
 
   return (
     <div className="flex flex-col h-full">
@@ -39,7 +39,7 @@ export const AnonChat = () => {
           )}
         </div>
       )}
-      <MessageInput onSend={sendMessage} disabled={isStreaming} />
+      <MessageInput onSend={sendMessage} isStreaming={isStreaming} onStop={stopStreaming} />
     </div>
   );
 };

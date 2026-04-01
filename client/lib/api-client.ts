@@ -59,7 +59,8 @@ export async function uploadFile(file: File): Promise<{ id: string; file_name: s
 
 export async function streamPost(
   path: string,
-  body: unknown
+  body: unknown,
+  externalSignal?: AbortSignal
 ): Promise<ReadableStreamDefaultReader<Uint8Array>> {
   const token = getToken();
   const anonToken = getAnonToken();
@@ -68,8 +69,12 @@ export async function streamPost(
   if (token) headers['Authorization'] = `Bearer ${token}`;
   if (anonToken) headers['X-Anon-Token'] = anonToken;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120_000); // 2 min for streaming
+  const timeoutController = new AbortController();
+  const timeout = setTimeout(() => timeoutController.abort(), 120_000); // 2 min for streaming
+
+  const signal = externalSignal
+    ? AbortSignal.any([timeoutController.signal, externalSignal])
+    : timeoutController.signal;
 
   let res: Response;
   try {
@@ -77,11 +82,12 @@ export async function streamPost(
       method: 'POST',
       headers,
       body: JSON.stringify(body),
-      signal: controller.signal,
+      signal,
     });
   } catch (err: any) {
     clearTimeout(timeout);
     if (err?.name === 'AbortError') {
+      if (externalSignal?.aborted) throw err; // user-initiated cancel — re-throw as AbortError
       throw Object.assign(new Error('Request timed out. Please try again.'), { status: 408 });
     }
     throw Object.assign(new Error('Network error. Please check your connection.'), { status: 0 });

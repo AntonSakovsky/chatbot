@@ -123,7 +123,12 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 
   userParts.push({ type: 'text', text: content });
 
-  const assistantText = await streamGeminiResponse(userParts, conversationHistory, res);
+  const abortController = new AbortController();
+  req.on('close', () => abortController.abort());
+
+  const assistantText = await streamGeminiResponse(userParts, conversationHistory, res, abortController.signal);
+
+  if (!assistantText.trim()) return;
 
   const { data: assistantMessage } = await supabase
     .from('messages')

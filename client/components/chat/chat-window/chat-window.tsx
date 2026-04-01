@@ -10,7 +10,7 @@ type ChatWindowProps = {
 
 export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
   const { data: messages = [], isLoading } = useMessages(conversationId);
-  const { sendMessage, streamingContent, isStreaming, error } = useSendMessage(conversationId);
+  const { sendMessage, stopStreaming, streamingContent, isStreaming, error } = useSendMessage(conversationId);
 
   return (
     <div className="flex flex-col h-full">
@@ -23,7 +23,7 @@ export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
       {error && (
         <p className="text-xs text-destructive text-center pb-2">{error.message}</p>
       )}
-      <MessageInput onSend={sendMessage} disabled={isStreaming} />
+      <MessageInput onSend={sendMessage} isStreaming={isStreaming} onStop={stopStreaming} />
     </div>
   );
 }

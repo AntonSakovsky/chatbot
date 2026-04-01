@@ -15,12 +15,13 @@ export type MessagePart = {
   data?: string;
 };
 
-const MODEL = 'gemini-2.5-flash-lite';
+const MODEL = 'gemini-3.1-flash-lite-preview';
 
 export async function streamGeminiResponse(
   userParts: MessagePart[],
   history: ConversationMessage[],
-  res: Response
+  res: Response,
+  abortSignal?: AbortSignal
 ): Promise<string> {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -44,27 +45,32 @@ export async function streamGeminiResponse(
       model: MODEL,
       contents,
       config: { thinkingConfig: { thinkingBudget: 0 } },
-    });
+      abortSignal,
+    } as any);
 
     for await (const chunk of stream) {
+      if (abortSignal?.aborted || res.destroyed) break;
       const delta = chunk.text;
       if (delta) {
         fullText += delta;
-        res.write(`data: ${JSON.stringify({ delta })}\n\n`);
+        const ok = res.write(`data: ${JSON.stringify({ delta })}\n\n`);
+        if (!ok || res.destroyed) break;
       }
     }
   } catch (err: any) {
-    console.log(err);
-    
-    const isQuota = err?.message?.includes('429') || err?.message?.includes('quota');
-    const message = isQuota
-      ? 'Rate limit exceeded. Please wait a moment and try again.'
-      : 'An error occurred while generating a response.';
-    res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
+    if (err?.name !== 'AbortError' && err?.code !== 'ABORT_ERR') {
+      const isQuota = err?.message?.includes('429') || err?.message?.includes('quota');
+      const message = isQuota
+        ? 'Rate limit exceeded. Please wait a moment and try again.'
+        : 'An error occurred while generating a response.';
+      if (!res.destroyed) res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
+    }
   }
 
-  res.write('data: [DONE]\n\n');
-  res.end();
+  if (!res.destroyed) {
+    res.write('data: [DONE]\n\n');
+    res.end();
+  }
 
   return fullText;
 }

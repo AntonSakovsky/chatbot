@@ -44,6 +44,7 @@ export function useDeleteConversation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      toast.success('Conversation deleted');
     },
     onError: (err) => {
       toast.error(getErrorMessage(err));
