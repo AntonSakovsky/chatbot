@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/use-auth';
 
 type Tab = 'signin' | 'signup';
 
-export function LoginPage() {
+export const LoginPage = () => {
   const [tab, setTab] = useState<Tab>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,7 +17,7 @@ export function LoginPage() {
   const { signInWithEmail, signUpWithEmail } = useAuth();
   const router = useRouter();
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);

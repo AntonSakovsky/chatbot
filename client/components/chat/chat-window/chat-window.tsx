@@ -8,7 +8,7 @@ type ChatWindowProps = {
   conversationId: string;
 };
 
-export function ChatWindow({ conversationId }: ChatWindowProps) {
+export const ChatWindow = ({ conversationId }: ChatWindowProps) => {
   const { data: messages = [], isLoading } = useMessages(conversationId);
   const { sendMessage, streamingContent, isStreaming, error } = useSendMessage(conversationId);
 

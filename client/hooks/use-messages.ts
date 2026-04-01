@@ -9,6 +9,7 @@ export type Attachment = {
   file_name: string;
   storage_path: string;
   mime_type: string;
+  url: string | null;
 }
 
 export type Message = {
@@ -48,7 +49,7 @@ export function useSendMessage(conversationId: string) {
   const [error, setError] = useState<Error | null>(null);
 
   const sendMessage = useCallback(
-    async (content: string, attachmentIds: string[] = []) => {
+    async (content: string, attachmentIds: string[] = [], optimisticAttachments: Attachment[] = []) => {
       setError(null);
       setIsStreaming(true);
       setStreamingContent('');
@@ -60,7 +61,7 @@ export function useSendMessage(conversationId: string) {
           role: 'user',
           content,
           created_at: new Date().toISOString(),
-          attachments: [],
+          attachments: optimisticAttachments,
         },
       ]);
 

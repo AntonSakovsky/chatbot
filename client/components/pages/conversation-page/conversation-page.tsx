@@ -12,7 +12,7 @@ type ConversationPageProps = {
   id: string;
 };
 
-export function ConversationPage({ id }: ConversationPageProps) {
+export const ConversationPage = ({ id }: ConversationPageProps) => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialMessage = searchParams.get('msg');

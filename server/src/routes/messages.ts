@@ -1,7 +1,7 @@
 import { Response, Router } from 'express';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { ConversationMessage, generateTitle, streamGeminiResponse } from '../services/llm';
-import { getFileAsBase64 } from '../services/storage';
+import { getFileAsBase64, getSignedUrls } from '../services/storage';
 import { supabase } from '../services/supabase';
 
 const router = Router({ mergeParams: true });
@@ -34,7 +34,20 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: error.message });
     return;
   }
-  res.json(data);
+
+  const allAttachments = (data ?? []).flatMap(m => (m.attachments as any[]) ?? []);
+  const paths = allAttachments.map(a => a.storage_path);
+  const signedUrls = paths.length > 0 ? await getSignedUrls(paths) : {};
+
+  const messagesWithUrls = (data ?? []).map(m => ({
+    ...m,
+    attachments: ((m.attachments as any[]) ?? []).map(att => ({
+      ...att,
+      url: signedUrls[att.storage_path] ?? null,
+    })),
+  }));
+
+  res.json(messagesWithUrls);
 });
 
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {

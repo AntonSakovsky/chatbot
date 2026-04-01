@@ -33,7 +33,8 @@ router.post('/', requireAuth, upload.single('file'), async (req: AuthRequest, re
     return;
   }
 
-  const { originalname, mimetype, buffer } = req.file;
+  const { mimetype, buffer } = req.file;
+  const originalname = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
 
   const { path: storagePath } = await uploadFile(buffer, originalname, mimetype);
 

@@ -1,17 +1,24 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { ArrowUp } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { ArrowUp, Paperclip } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { uploadFile } from '@/lib/api-client';
+import { FileChip } from './file-chip/file-chip';
+import type { OptimisticAttachment, PendingFile } from './types';
+
+const ACCEPTED = 'image/jpeg,image/png,image/gif,image/webp,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 type MessageInputProps = {
-  onSend: (content: string) => void;
+  onSend: (content: string, attachmentIds: string[], optimisticAttachments: OptimisticAttachment[]) => void;
   disabled?: boolean;
 };
 
-export function MessageInput({ onSend, disabled }: MessageInputProps) {
+export const MessageInput = ({ onSend, disabled }: MessageInputProps) => {
   const [value, setValue] = useState('');
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -20,49 +27,150 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
     textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
   }, [value]);
 
-  function handleKeyDown(e: React.KeyboardEvent) {
+  const uploadAndTrack = useCallback(async (file: File) => {
+    const localId = `${Date.now()}-${Math.random()}`;
+    const objectUrl = URL.createObjectURL(file);
+
+    setPendingFiles(prev => [...prev, { localId, file, objectUrl, uploading: true }]);
+
+    try {
+      const result = await uploadFile(file);
+      setPendingFiles(prev =>
+        prev.map(f =>
+          f.localId === localId
+            ? { ...f, uploading: false, uploadedId: result.id, file_name: result.file_name, mime_type: result.mime_type }
+            : f
+        )
+      );
+    } catch {
+      setPendingFiles(prev =>
+        prev.map(f => (f.localId === localId ? { ...f, uploading: false, error: 'Upload failed' } : f))
+      );
+    }
+  }, []);
+
+  const addFiles = useCallback(
+    (files: FileList | File[]) => Array.from(files).forEach(f => uploadAndTrack(f)),
+    [uploadAndTrack]
+  );
+
+  const removeFile = (localId: string) => {
+    setPendingFiles(prev => {
+      const f = prev.find(f => f.localId === localId);
+      if (f) URL.revokeObjectURL(f.objectUrl);
+      return prev.filter(f => f.localId !== localId);
+    });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
-  }
+  };
 
-  function handleSubmit() {
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const fileItems = Array.from(e.clipboardData.items).filter(i => i.kind === 'file');
+    if (!fileItems.length) return;
+    e.preventDefault();
+    addFiles(fileItems.map(i => i.getAsFile()).filter(Boolean) as File[]);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  };
+
+  const handleSubmit = () => {
     const trimmed = value.trim();
-    if (!trimmed || disabled) return;
-    onSend(trimmed);
+    const readyFiles = pendingFiles.filter(f => f.uploadedId);
+    if ((!trimmed && !readyFiles.length) || disabled) return;
+    if (pendingFiles.some(f => f.uploading)) return;
+
+    const attachmentIds = readyFiles.map(f => f.uploadedId!);
+    const optimisticAttachments: OptimisticAttachment[] = readyFiles.map(f => ({
+      id: f.uploadedId!,
+      file_name: f.file_name ?? f.file.name,
+      mime_type: f.mime_type ?? f.file.type,
+      storage_path: '',
+      url: f.objectUrl,
+    }));
+    setPendingFiles([]);
+    onSend(trimmed, attachmentIds, optimisticAttachments);
     setValue('');
-  }
+  };
+
+  const isUploading = pendingFiles.some(f => f.uploading);
+  const canSend = (value.trim() || pendingFiles.some(f => f.uploadedId)) && !disabled && !isUploading;
 
   return (
     <div className="p-4 border-t border-border">
       <div
-        className={cn('relative flex gap-2 bg-muted rounded-2xl px-4 py-3', {
-          'items-center': value.split('\n').length === 1,
-          'items-end': value.split('\n').length > 1,
-        })}
+        className="relative flex flex-col gap-2 bg-muted rounded-2xl px-4 py-3"
+        onDrop={handleDrop}
+        onDragOver={e => e.preventDefault()}
       >
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Message ChatBot..."
-          disabled={disabled}
-          rows={1}
-          className="flex-1 bg-transparent resize-none text-sm outline-none placeholder:text-muted-foreground max-h-50 leading-relaxed disabled:opacity-50"
-        />
-        <button
-          onClick={handleSubmit}
-          disabled={!value.trim() || disabled}
-          className="shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-opacity disabled:opacity-30 hover:opacity-90"
+        {pendingFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 pb-1">
+            {pendingFiles.map(f => (
+              <FileChip key={f.localId} file={f} onRemove={() => removeFile(f.localId)} />
+            ))}
+          </div>
+        )}
+
+        <div
+          className={cn('flex gap-2', {
+            'items-center': value.split('\n').length === 1,
+            'items-end': value.split('\n').length > 1,
+          })}
         >
-          <ArrowUp className="w-4 h-4" />
-        </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
+            aria-label="Attach file"
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            <Paperclip className="w-4 h-4" />
+          </button>
+
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder="Message ChatBot..."
+            disabled={disabled}
+            rows={1}
+            className="flex-1 bg-transparent resize-none text-sm outline-none placeholder:text-muted-foreground max-h-50 leading-relaxed disabled:opacity-50"
+          />
+
+          <button
+            onClick={handleSubmit}
+            disabled={!canSend}
+            className="shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-opacity disabled:opacity-30 hover:opacity-90"
+          >
+            <ArrowUp className="w-4 h-4" />
+          </button>
+        </div>
       </div>
+
       <p className="text-center text-xs text-muted-foreground mt-2">
         ChatBot can make mistakes. Consider checking important information.
       </p>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept={ACCEPTED}
+        className="hidden"
+        onChange={e => {
+          if (e.target.files) addFiles(e.target.files);
+          e.target.value = '';
+        }}
+      />
     </div>
   );
-}
+};

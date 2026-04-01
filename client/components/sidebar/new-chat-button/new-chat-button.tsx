@@ -8,11 +8,11 @@ type NewChatButtonProps = {
   onClose?: () => void;
 };
 
-export function NewChatButton({ onClose }: NewChatButtonProps) {
+export const NewChatButton = ({ onClose }: NewChatButtonProps) => {
   const router = useRouter();
   const { mutate: createConversation, isPending } = useCreateConversation();
 
-  function handleClick() {
+  const handleClick = () => {
     createConversation(undefined, {
       onSuccess: (conversation) => {
         onClose?.();

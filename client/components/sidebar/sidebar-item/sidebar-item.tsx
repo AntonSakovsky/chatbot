@@ -21,27 +21,27 @@ type SidebarItemProps = {
   onClose?: () => void;
 };
 
-export function SidebarItem({ conversation, onClose }: SidebarItemProps) {
+export const SidebarItem = ({ conversation, onClose }: SidebarItemProps) => {
   const params = useParams();
   const router = useRouter();
   const isActive = params?.id === conversation.id;
   const { mutate: deleteConversation, isPending } = useDeleteConversation();
   const [open, setOpen] = useState(false);
 
-  function handleDeleteClick(e: React.MouseEvent) {
+  const handleDeleteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setOpen(true);
-  }
+  };
 
-  function handleConfirm() {
+  const handleConfirm = () => {
     deleteConversation(conversation.id, {
       onSuccess: () => {
         setOpen(false);
         if (isActive) router.push('/chat');
       },
     });
-  }
+  };
 
   return (
     <>

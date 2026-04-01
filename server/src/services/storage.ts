@@ -21,6 +21,17 @@ export async function uploadFile(
   return { path, publicUrl: data.publicUrl };
 }
 
+export async function getSignedUrls(paths: string[], expiresIn = 3600): Promise<Record<string, string>> {
+  if (paths.length === 0) return {};
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrls(paths, expiresIn);
+  if (error) throw new Error(`Failed to create signed URLs: ${error.message}`);
+  const map: Record<string, string> = {};
+  for (const entry of data ?? []) {
+    if (entry.signedUrl && entry.path) map[entry.path] = entry.signedUrl;
+  }
+  return map;
+}
+
 export async function getFileAsBase64(storagePath: string): Promise<string> {
   const { data, error } = await supabase.storage
     .from(BUCKET)

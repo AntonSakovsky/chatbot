@@ -3,12 +3,13 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import type { Message as MessageType } from '@/hooks/use-messages';
+import { AttachmentPreview } from './attachment-preview/attachment-preview';
 
 type MessageProps = {
   message: MessageType;
 };
 
-export function Message({ message }: MessageProps) {
+export const Message = ({ message }: MessageProps) => {
   const isUser = message.role === 'user';
 
   return (
@@ -27,7 +28,14 @@ export function Message({ message }: MessageProps) {
         }`}
       >
         {isUser ? (
-          <p className="whitespace-pre-wrap">{message.content}</p>
+          <>
+            {message.attachments && message.attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {message.attachments.map(att => <AttachmentPreview key={att.id} attachment={att} />)}
+              </div>
+            )}
+            {message.content && <p className="whitespace-pre-wrap">{message.content}</p>}
+          </>
         ) : (
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
@@ -83,29 +91,4 @@ export function Message({ message }: MessageProps) {
       </div>
     </div>
   );
-}
-
-type StreamingMessageProps = {
-  content: string;
 };
-
-export function StreamingMessage({ content }: StreamingMessageProps) {
-  return (
-    <div className="flex gap-3 justify-start">
-      <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5">
-        <span className="text-primary-foreground text-xs font-bold">C</span>
-      </div>
-      <div className="max-w-[80%] rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm bg-muted text-foreground">
-        {content ? (
-          <p className="whitespace-pre-wrap leading-relaxed">{content}</p>
-        ) : (
-          <div className="flex gap-1 items-center h-5">
-            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:0ms]" />
-            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:150ms]" />
-            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:300ms]" />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAnonStatus } from '@/hooks/use-anonymous';
 import { useAuth } from '@/hooks/use-auth';
 
-export function AnonBanner() {
+export const AnonBanner = () => {
   const { user } = useAuth();
   const { data } = useAnonStatus();
 

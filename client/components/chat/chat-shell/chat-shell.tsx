@@ -9,7 +9,7 @@ type ChatShellProps = {
   children: React.ReactNode;
 };
 
-export function ChatShell({ children }: ChatShellProps) {
+export const ChatShell = ({ children }: ChatShellProps) => {
   const [open, setOpen] = useState(false);
 
   return (

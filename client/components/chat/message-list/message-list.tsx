@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Message, StreamingMessage } from '@/components/chat/message/message';
+import { Message } from '@/components/chat/message/message';
+import { StreamingMessage } from '@/components/chat/message/streaming-message/streaming-message';
 import type { Message as MessageType } from '@/hooks/use-messages';
 
 type MessageListProps = {
@@ -12,7 +13,7 @@ type MessageListProps = {
   isLoading: boolean;
 };
 
-export function MessageList({ messages, streamingContent, isStreaming, isLoading }: MessageListProps) {
+export const MessageList = ({ messages, streamingContent, isStreaming, isLoading }: MessageListProps) => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

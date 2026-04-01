@@ -15,7 +15,7 @@ type SidebarProps = {
   onClose?: () => void;
 };
 
-export function Sidebar({ onClose }: SidebarProps) {
+export const Sidebar = ({ onClose }: SidebarProps) => {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { data: conversations, isLoading } = useConversations();
