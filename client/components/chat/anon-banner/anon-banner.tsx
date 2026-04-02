@@ -1,24 +1,29 @@
-'use client';
-
-import Link from 'next/link';
 import { useAnonStatus } from '@/hooks/use-anonymous';
 import { useAuth } from '@/hooks/use-auth';
+import Link from 'next/link';
 
 export const AnonBanner = () => {
   const { user } = useAuth();
-  const { data } = useAnonStatus();
+  const { data, isLoading } = useAnonStatus();
 
-  if (user || !data) return null;
+  if (user || (!isLoading && !data)) return null;
 
   return (
     <div className="flex items-center justify-between gap-4 bg-muted/60 border-b border-border px-4 py-2 text-sm">
       <span className="text-muted-foreground">
-        {data.remaining > 0 ? (
+        {isLoading && (
           <>
-            <span className="text-foreground font-medium">{data.remaining}</span> free{' '}
-            {data.remaining === 1 ? 'question' : 'questions'} remaining
+            <span className="inline-block h-4 w-4 animate-pulse rounded bg-muted-foreground/30 align-middle" />{' '}
+            free questions remaining
           </>
-        ) : (
+        )}
+        {!isLoading && data!.remaining > 0 && (
+          <>
+            <span className="text-foreground font-medium">{data!.remaining}</span> free{' '}
+            {data!.remaining === 1 ? 'question' : 'questions'} remaining
+          </>
+        )}
+        {!isLoading && data!.remaining === 0 && (
           <span className="text-destructive font-medium">Free question limit reached</span>
         )}
       </span>
@@ -30,4 +35,4 @@ export const AnonBanner = () => {
       </Link>
     </div>
   );
-}
+};

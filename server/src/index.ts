@@ -33,14 +33,14 @@ app.use(cors({
 }));
 
 app.use('/api/', rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
-  max: 100,
+  windowMs: 1 * 60 * 1000, // 1 min
+  max: 50,
   message: { error: 'Too many requests, please try again later.' },
 }));
 
 app.use('/api/anonymous/chat', rateLimit({
   windowMs: 60 * 1000,
-  max: 5,
+  max: 50,
 }));
 
 app.use(express.json({ limit: '1mb' }));

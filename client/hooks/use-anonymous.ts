@@ -42,10 +42,11 @@ export function useAnonChat() {
       setIsStreaming(true);
       setStreamingContent('');
 
+      const tempId = `temp-${Date.now()}`;
       setMessages((prev) => [
         ...prev,
         {
-          id: `temp-${Date.now()}`,
+          id: tempId,
           role: 'user' as const,
           content,
           created_at: new Date().toISOString(),
@@ -77,7 +78,7 @@ export function useAnonChat() {
         const e = err as ApiError;
         const friendly = getErrorMessage(e);
         setError(Object.assign(new Error(friendly), e));
-        setMessages((prev) => prev.filter((m) => !m.id.startsWith('temp-')));
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
       } finally {
         setIsStreaming(false);
         setStreamingContent('');

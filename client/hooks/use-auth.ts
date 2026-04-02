@@ -2,6 +2,7 @@
 
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser';
 import type { Session, User } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/dist/client/components/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -13,6 +14,7 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }: AuthStateChangePayload) => {
@@ -48,8 +50,10 @@ export function useAuth() {
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     localStorage.removeItem('anon_token');
+    queryClient.removeQueries({ queryKey: ['conversations'] });
+    queryClient.removeQueries({ queryKey: ['anon-status'] });
     router.push('/chat');
-  }, [router]);
+  }, [router, queryClient]);
 
   return { user, loading, signInWithEmail, signUpWithEmail, signOut };
 }

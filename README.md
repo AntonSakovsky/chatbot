@@ -4,15 +4,15 @@ A full-stack ChatGPT-like chatbot with streaming AI responses, file/image upload
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js 16 (App Router) + TanStack Query |
-| UI | shadcn/ui + Tailwind CSS (dark theme) |
-| Backend | Express.js (TypeScript) |
-| Database | Supabase (PostgreSQL) |
-| Auth | Supabase Auth — email/password |
-| LLM | Google Gemini 2.0 Flash |
-| File Storage | Supabase Storage |
+| Layer        | Technology                               |
+| ------------ | ---------------------------------------- |
+| Frontend     | Next.js 16 (App Router) + TanStack Query |
+| UI           | shadcn/ui + Tailwind CSS (dark theme)    |
+| Backend      | Express.js (TypeScript)                  |
+| Database     | Supabase (PostgreSQL)                    |
+| Auth         | Supabase Auth — email/password           |
+| LLM          | Google Gemini 3.1 Flash Lite             |
+| File Storage | Supabase Storage                         |
 
 ## Features
 
@@ -100,6 +100,7 @@ Also create a storage bucket named `attachments` in Supabase Storage (set it to 
 ### 2. Environment Variables
 
 **`server/.env`**
+
 ```env
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
@@ -109,6 +110,7 @@ CLIENT_URL=http://localhost:3000
 ```
 
 **`client/.env.local`**
+
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3001
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -145,16 +147,16 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## API Overview
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET/POST | `/api/conversations` | List / create conversations |
-| PATCH/DELETE | `/api/conversations/:id` | Update title / delete |
-| GET | `/api/conversations/:id/messages` | Get messages |
-| POST | `/api/conversations/:id/messages` | Send message (SSE stream) |
-| POST | `/api/upload` | Upload file/image |
-| GET | `/api/anonymous/status` | Remaining anonymous questions |
-| POST | `/api/anonymous/chat` | Anonymous SSE chat (max 3) |
-| GET | `/api/auth/me` | Verify JWT, return profile |
+| Method       | Endpoint                          | Description                   |
+| ------------ | --------------------------------- | ----------------------------- |
+| GET/POST     | `/api/conversations`              | List / create conversations   |
+| PATCH/DELETE | `/api/conversations/:id`          | Update title / delete         |
+| GET          | `/api/conversations/:id/messages` | Get messages                  |
+| POST         | `/api/conversations/:id/messages` | Send message (SSE stream)     |
+| POST         | `/api/upload`                     | Upload file/image             |
+| GET          | `/api/anonymous/status`           | Remaining anonymous questions |
+| POST         | `/api/anonymous/chat`             | Anonymous SSE chat (max 3)    |
+| GET          | `/api/auth/me`                    | Verify JWT, return profile    |
 
 ## Deployment (Vercel)
 
