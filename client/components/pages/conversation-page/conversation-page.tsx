@@ -5,9 +5,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMessages, useSendMessage } from '@/hooks/use-messages';
 import { useRealtimeMessages } from '@/hooks/use-realtime-sync';
-import type { ApiError } from '@/lib/error-utils';
 import { MessageList } from '@/components/chat/message-list/message-list';
 import { MessageInput } from '@/components/chat/message-input/message-input';
+import { ChatError } from '@/components/chat/chat-error/chat-error';
 
 type ConversationPageProps = {
   id: string;
@@ -46,23 +46,14 @@ export const ConversationPage = ({ id }: ConversationPageProps) => {
   }, [initialMessage, id, sendMessage, router, queryClient]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-[calc(100%-44px)] md:h-full">
       <MessageList
         messages={messages}
         streamingContent={streamingContent}
         isStreaming={isStreaming}
         isLoading={isLoading}
       />
-      {error && (
-        <div className="text-center pb-2 px-4">
-          <p className="text-xs text-destructive">{error.message}</p>
-          {(error as ApiError).code === 'LIMIT_REACHED' && (
-            <a href="/login" className="text-xs underline text-muted-foreground hover:text-foreground mt-1 inline-block">
-              Sign in to continue →
-            </a>
-          )}
-        </div>
-      )}
+      <ChatError error={error} />
       <MessageInput onSend={sendMessage} isStreaming={isStreaming} onStop={stopStreaming} />
     </div>
   );

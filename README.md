@@ -2,6 +2,8 @@
 
 A full-stack ChatGPT-like chatbot with streaming AI responses, file/image uploads, and anonymous access. Built as a test assignment.
 
+> **NOTE:** If the chat is not responding, enable a VPN — the Google Gemini API may be blocked in your region.
+
 ## Tech Stack
 
 | Layer        | Technology                               |

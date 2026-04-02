@@ -57,7 +57,7 @@ export const SidebarItem = ({ conversation, onClose }: SidebarItemProps) => {
         <span className="truncate">{conversation.title}</span>
         <button
           onClick={handleDeleteClick}
-          className="shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+          className="shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
           aria-label="Delete conversation"
         >
           <Trash2 className="w-3.5 h-3.5" />

@@ -22,7 +22,7 @@ export const AuthNewChat = () => {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-[calc(100%-44px)] md:h-full">
       <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center p-8">
         <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
           <span className="text-primary-foreground text-xl font-bold">C</span>
