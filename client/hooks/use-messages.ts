@@ -102,7 +102,7 @@ export function useSendMessage(conversationId: string) {
           abortController.signal
         );
 
-        const { fullText, userAborted } = await readSSEStream(reader, setStreamingContent);
+        const { fullText, userAborted } = await readSSEStream(reader, setStreamingContent, abortController.signal);
 
         if (fullText) {
           queryClient.setQueryData<Message[]>(['messages', conversationId], (prev) => [

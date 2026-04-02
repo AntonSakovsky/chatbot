@@ -1,6 +1,7 @@
 export async function readSSEStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
-  onDelta: (text: string) => void
+  onDelta: (text: string) => void,
+  abortSignal?: AbortSignal
 ): Promise<{ fullText: string; userAborted: boolean }> {
   const decoder = new TextDecoder();
   let fullText = '';
@@ -13,6 +14,10 @@ export async function readSSEStream(
 
       const chunk = decoder.decode(value, { stream: true });
       for (const line of chunk.split('\n')) {
+        if (abortSignal?.aborted) {
+          userAborted = true;
+          break;
+        }
         if (!line.startsWith('data: ')) continue;
         const payload = line.slice(6).trim();
         if (payload === '[DONE]') break;

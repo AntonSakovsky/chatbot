@@ -1,9 +1,12 @@
 import { useAnonStatus } from '@/hooks/use-anonymous';
-import { useAuth } from '@/hooks/use-auth';
+import { User } from '@supabase/supabase-js';
 import Link from 'next/link';
 
-export const AnonBanner = () => {
-  const { user } = useAuth();
+type AnonBannerProps = {
+  user: User | null;
+};
+
+export const AnonBanner = ({ user } : AnonBannerProps) => {
   const { data, isLoading } = useAnonStatus();
 
   if (user || (!isLoading && !data)) return null;

@@ -17,7 +17,7 @@ type SidebarProps = {
 
 export const Sidebar = ({ onClose }: SidebarProps) => {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { data: conversations, isLoading } = useConversations();
   useRealtimeSync(user);
 
@@ -66,15 +66,22 @@ export const Sidebar = ({ onClose }: SidebarProps) => {
       </div>
 
       <div className="p-2 border-t border-border">
-        <button
-          onClick={user ? signOut : onSignInClick}
-          className={cn(
-            'flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent transition-colors', {['hover:text-red-400']: user}
-          )}
-        >
-          {user ? <LogOut className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
-          {user ? 'Sign out' : 'Sign in'}
-        </button>
+        {authLoading ? (
+          <div className="flex items-center gap-2 px-3 py-2">
+            <Skeleton className="w-4 h-4 rounded" />
+            <Skeleton className="h-4 w-16 rounded" />
+          </div>
+        ) : (
+          <button
+            onClick={user ? signOut : onSignInClick}
+            className={cn(
+              'flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent transition-colors', {['hover:text-red-400']: user}
+            )}
+          >
+            {user ? <LogOut className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+            {user ? 'Sign out' : 'Sign in'}
+          </button>
+        )}
       </div>
     </div>
   );

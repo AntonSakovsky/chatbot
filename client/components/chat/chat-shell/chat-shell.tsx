@@ -2,6 +2,7 @@
 
 import { AnonBanner } from '@/components/chat/anon-banner/anon-banner';
 import { Sidebar } from '@/components/sidebar/sidebar/sidebar';
+import { useAuth } from '@/hooks/use-auth';
 import { Menu } from 'lucide-react';
 import { useState } from 'react';
 
@@ -11,6 +12,7 @@ type ChatShellProps = {
 
 export const ChatShell = ({ children }: ChatShellProps) => {
   const [open, setOpen] = useState(false);
+  const { user, loading } = useAuth();
 
   return (
     <div className="flex h-full">
@@ -41,7 +43,7 @@ export const ChatShell = ({ children }: ChatShellProps) => {
           </button>
           <span className="text-sm font-semibold">ChatBot</span>
         </div>
-        <AnonBanner />
+        {loading ? null : <AnonBanner user={user} />}
         {children}
       </main>
     </div>
