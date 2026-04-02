@@ -34,8 +34,6 @@ apiClient.interceptors.response.use(
     const code = err.response?.data?.code;
     const status = err.response?.status;
 
-    // On 401, clear the stored token so the next request won't send an expired one.
-    // Supabase's onAuthStateChange will handle signing the user out automatically.
     if (status === 401) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('sb-access-token');
@@ -46,7 +44,7 @@ apiClient.interceptors.response.use(
   }
 );
 
-export async function uploadFile(file: File): Promise<{ id: string; file_name: string; mime_type: string }> {
+export async function uploadFile(file: File): Promise<{ id: string; file_name: string; mime_type: string; url: string | null }> {
   const form = new FormData();
   form.append('file', file);
 

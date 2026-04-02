@@ -3,6 +3,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, streamPost } from '@/lib/api-client';
 import { getErrorMessage, type ApiError } from '@/lib/error-utils';
+import { readSSEStream } from '@/lib/stream-utils';
 
 export type Attachment = {
   id: string;
@@ -22,25 +23,31 @@ export type Message = {
 
 export function useMessages(conversationId: string | null) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   return useQuery<Message[]>({
     queryKey: ['messages', conversationId],
     queryFn: async () => {
       try {
         const { data } = await apiClient.get(`/api/conversations/${conversationId}/messages`);
-        
-        const imageUrls: string[] = (data as Message[])
-          .flatMap(m => m.attachments ?? [])
-          .filter(a => a.mime_type.startsWith('image/') && a.url)
-          .map(a => a.url as string);
 
-        if (imageUrls.length > 0) {
-          await Promise.all(imageUrls.map(url => new Promise<void>(resolve => {
-            const img = new window.Image();
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-            img.src = url;
-          })));
+        const cached = queryClient.getQueryData<Message[]>(['messages', conversationId]);
+        if (cached) {
+          const urlById = new Map<string, string>();
+          for (const msg of cached) {
+            for (const att of msg.attachments ?? []) {
+              if (att.url) urlById.set(att.id, att.url);
+            }
+          }
+          if (urlById.size > 0) {
+            return (data as Message[]).map((msg: Message) => ({
+              ...msg,
+              attachments: (msg.attachments ?? []).map((att: Attachment) => ({
+                ...att,
+                url: urlById.get(att.id) ?? att.url,
+              })),
+            }));
+          }
         }
 
         return data;
@@ -95,41 +102,7 @@ export function useSendMessage(conversationId: string) {
           abortController.signal
         );
 
-        const decoder = new TextDecoder();
-        let fullText = '';
-        let userAborted = false;
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
-
-            for (const line of lines) {
-              if (!line.startsWith('data: ')) continue;
-              const payload = line.slice(6).trim();
-              if (payload === '[DONE]') break;
-              try {
-                const parsed = JSON.parse(payload);
-                if (parsed.error) throw new Error(parsed.error);
-                if (parsed.delta) {
-                  fullText += parsed.delta;
-                  setStreamingContent(fullText);
-                }
-              } catch (parseErr: any) {
-                if (parseErr?.message && !parseErr.message.includes('JSON')) throw parseErr;
-              }
-            }
-          }
-        } catch (readErr: any) {
-          if (readErr?.name === 'AbortError') {
-            userAborted = true;
-          } else {
-            throw readErr;
-          }
-        }
+        const { fullText, userAborted } = await readSSEStream(reader, setStreamingContent);
 
         if (fullText) {
           queryClient.setQueryData<Message[]>(['messages', conversationId], (prev) => [

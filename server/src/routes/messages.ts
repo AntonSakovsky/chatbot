@@ -4,6 +4,18 @@ import { ConversationMessage, generateTitle, streamGeminiResponse } from '../ser
 import { getFileAsBase64, getSignedUrls } from '../services/storage';
 import { supabase } from '../services/supabase';
 
+type AttachmentRow = {
+  id: string;
+  file_name: string;
+  storage_path: string;
+  mime_type: string;
+  extracted_text?: string | null;
+};
+
+type UserPart =
+  | { type: 'text'; text: string }
+  | { type: 'image'; mimeType: string; data: string };
+
 const router = Router({ mergeParams: true });
 
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
@@ -31,17 +43,18 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     .order('created_at', { ascending: true });
 
   if (error) {
-    res.status(500).json({ error: error.message });
+    console.error('GET /messages:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
     return;
   }
 
-  const allAttachments = (data ?? []).flatMap(m => (m.attachments as any[]) ?? []);
+  const allAttachments = (data ?? []).flatMap(m => (m.attachments as AttachmentRow[]) ?? []);
   const paths = allAttachments.map(a => a.storage_path);
   const signedUrls = paths.length > 0 ? await getSignedUrls(paths) : {};
 
   const messagesWithUrls = (data ?? []).map(m => ({
     ...m,
-    attachments: ((m.attachments as any[]) ?? []).map(att => ({
+    attachments: ((m.attachments as AttachmentRow[]) ?? []).map(att => ({
       ...att,
       url: signedUrls[att.storage_path] ?? null,
     })),
@@ -69,7 +82,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  let attachments: any[] = [];
+  let attachments: AttachmentRow[] = [];
   if (attachmentIds.length > 0) {
     const { data } = await supabase
       .from('attachments')
@@ -85,7 +98,8 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     .single();
 
   if (insertError) {
-    res.status(500).json({ error: insertError.message });
+    console.error('POST /messages insert:', insertError.message);
+    res.status(500).json({ error: 'Internal server error' });
     return;
   }
 
@@ -110,7 +124,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       parts: [{ text: m.content }],
     }));
 
-  const userParts: any[] = [];
+  const userParts: UserPart[] = [];
 
   for (const att of attachments) {
     if (att.extracted_text) {
@@ -137,9 +151,9 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     .single();
 
   if (conv.title === 'New Chat' && assistantMessage) {
-    generateTitle(content).then((title) => {
-      supabase.from('conversations').update({ title }).eq('id', conversationId).then(() => {});
-    });
+    generateTitle(content)
+      .then((title) => supabase.from('conversations').update({ title }).eq('id', conversationId))
+      .catch(console.error);
   }
 });
 

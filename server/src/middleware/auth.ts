@@ -1,15 +1,15 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { supabase } from '../services/supabase';
 
 export type AuthRequest = Request & {
   userId?: string;
   userEmail?: string;
-}
+};
 
 export async function requireAuth(
   req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> {
   const authHeader = req.headers.authorization;
 
@@ -32,11 +32,7 @@ export async function requireAuth(
   next();
 }
 
-export function optionalAuth(
-  req: AuthRequest,
-  _res: Response,
-  next: NextFunction
-): void {
+export function optionalAuth(req: AuthRequest, _res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     next();
@@ -44,11 +40,14 @@ export function optionalAuth(
   }
 
   const token = authHeader.slice(7);
-  supabase.auth.getUser(token).then(({ data }) => {
-    if (data.user) {
-      req.userId = data.user.id;
-      req.userEmail = data.user.email;
-    }
-    next();
-  });
+  supabase.auth
+    .getUser(token)
+    .then(({ data }) => {
+      if (data.user) {
+        req.userId = data.user.id;
+        req.userEmail = data.user.email;
+      }
+      next();
+    })
+    .catch(() => next());
 }

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Menu } from 'lucide-react';
-import { Sidebar } from '@/components/sidebar/sidebar/sidebar';
 import { AnonBanner } from '@/components/chat/anon-banner/anon-banner';
+import { Sidebar } from '@/components/sidebar/sidebar/sidebar';
+import { Menu } from 'lucide-react';
+import { useState } from 'react';
 
 type ChatShellProps = {
   children: React.ReactNode;
@@ -19,10 +19,7 @@ export const ChatShell = ({ children }: ChatShellProps) => {
       </aside>
 
       {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
-          onClick={() => setOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setOpen(false)} />
       )}
 
       <aside
@@ -49,4 +46,4 @@ export const ChatShell = ({ children }: ChatShellProps) => {
       </main>
     </div>
   );
-}
+};

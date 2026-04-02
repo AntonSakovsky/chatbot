@@ -4,7 +4,7 @@ import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { supabase } from '../services/supabase';
-import { uploadFile } from '../services/storage';
+import { uploadFile, getSignedUrls } from '../services/storage';
 
 const router = Router();
 
@@ -70,11 +70,13 @@ router.post('/', requireAuth, upload.single('file'), async (req: AuthRequest, re
     .single();
 
   if (error) {
-    res.status(500).json({ error: error.message });
+    console.error('POST /upload insert:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
     return;
   }
 
-  res.status(201).json(data);
+  const signedUrls = await getSignedUrls([storagePath]);
+  res.status(201).json({ ...data, url: signedUrls[storagePath] ?? null });
 });
 
 export default router;

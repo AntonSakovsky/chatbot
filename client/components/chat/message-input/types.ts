@@ -5,6 +5,7 @@ export type PendingFile = {
   uploadedId?: string;
   file_name?: string;
   mime_type?: string;
+  url?: string | null;
   uploading: boolean;
   error?: string;
 };

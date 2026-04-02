@@ -5,6 +5,7 @@ import { useState, useCallback, useRef } from 'react';
 import { apiClient, streamPost } from '@/lib/api-client';
 import { getOrCreateAnonToken } from '@/lib/anon-token';
 import { getErrorMessage, type ApiError } from '@/lib/error-utils';
+import { readSSEStream } from '@/lib/stream-utils';
 import type { Message } from './use-messages';
 
 export function useAnonStatus() {
@@ -54,39 +55,7 @@ export function useAnonChat() {
 
       try {
         const reader = await streamPost('/api/anonymous/chat', { content }, abortController.signal);
-        const decoder = new TextDecoder();
-        let fullText = '';
-        let userAborted = false;
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true });
-            for (const line of chunk.split('\n')) {
-              if (!line.startsWith('data: ')) continue;
-              const payload = line.slice(6).trim();
-              if (payload === '[DONE]') break;
-              try {
-                const parsed = JSON.parse(payload);
-                if (parsed.error) throw new Error(parsed.error);
-                if (parsed.delta) {
-                  fullText += parsed.delta;
-                  setStreamingContent(fullText);
-                }
-              } catch (parseErr: any) {
-                if (parseErr?.message && !parseErr.message.includes('JSON')) throw parseErr;
-              }
-            }
-          }
-        } catch (readErr: any) {
-          if (readErr?.name === 'AbortError') {
-            userAborted = true;
-          } else {
-            throw readErr;
-          }
-        }
+        const { fullText, userAborted } = await readSSEStream(reader, setStreamingContent);
 
         if (fullText) {
           setMessages((prev) => [

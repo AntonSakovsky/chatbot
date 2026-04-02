@@ -12,7 +12,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     .order('updated_at', { ascending: false });
 
   if (error) {
-    res.status(500).json({ error: error.message });
+    console.error('GET /conversations:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
     return;
   }
   res.json(data);
@@ -26,7 +27,8 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     .single();
 
   if (error) {
-    res.status(500).json({ error: error.message });
+    console.error('POST /conversations:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
     return;
   }
   res.status(201).json(data);
@@ -45,7 +47,8 @@ router.patch('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     .single();
 
   if (error) {
-    res.status(500).json({ error: error.message });
+    console.error('PATCH /conversations/:id:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
     return;
   }
   if (!data) {
@@ -65,7 +68,8 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     .eq('user_id', req.userId!);
 
   if (error) {
-    res.status(500).json({ error: error.message });
+    console.error('DELETE /conversations/:id:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
     return;
   }
   res.status(204).send();
